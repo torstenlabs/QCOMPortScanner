@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "global.h"
 
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -13,16 +14,15 @@ MainWindow::MainWindow(QWidget *parent) :
     createTrayIcon();
     initConnection();
     searchCOMPorts(true);
+    ui->statusBar->showMessage(QString(VERSION));
     trayIcon->show();
-    hide();
+    this->hide();
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
 }
-
-
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
@@ -32,7 +32,6 @@ if(trayIcon->isVisible())
         event->ignore();
     }
 }
-
 
 void MainWindow::createTrayIcon()
 {
@@ -103,6 +102,7 @@ void MainWindow::searchCOMPorts(bool firstrun)
         newItem->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString("%1").arg(portManu))));
         items.append(newItem);
         NewCOMPorts.append(portName);
+
         if(COMPorts.contains(portName)==false)
         {
             if(firstrun == false)
@@ -112,7 +112,30 @@ void MainWindow::searchCOMPorts(bool firstrun)
         }
     }
     ui->treeWidget->insertTopLevelItems(0, items);
+
+    foreach(QString newPort, NewCOMPorts)
+    {
+        int element =0;
+        foreach(QString oldPort, COMPorts)
+        {
+
+            if(newPort == oldPort)
+            {
+                COMPorts.removeAt(element);
+            }
+            element++;
+        }
+    }
+
+    if(COMPorts.count() != 0)
+    {
+        foreach(QString oldPort, COMPorts)
+            trayIcon->showMessage(tr("Removed %1").arg(oldPort),tr("%1").arg(oldPort));
+    }
+
+
     COMPorts.clear();
+
     for(int y=0; y < NewCOMPorts.count();y++)
     {
         COMPorts.append(NewCOMPorts.at(y));
@@ -126,6 +149,7 @@ void MainWindow::slotTrayIconActivated(QSystemTrayIcon::ActivationReason reason)
             this->hide();
         else
             this->showNormal();
+
     if(reason == QSystemTrayIcon::Trigger)
     {
        searchCOMPorts();
