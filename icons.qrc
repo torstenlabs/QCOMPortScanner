@@ -1,5 +1,7 @@
 <RCC>
     <qresource prefix="/icon">
         <file>icons/connector-icon.gif</file>
+        <file>icons/connector-icon -error.gif</file>
+        <file>icons/connector-icon -progress.gif</file>
     </qresource>
 </RCC>

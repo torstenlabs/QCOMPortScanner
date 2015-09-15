@@ -88,6 +88,8 @@ void MainWindow::initConnection()
 
 void MainWindow::searchCOMPorts(bool firstrun)
 {
+    trayIcon->setIcon(QIcon(":/icon/icons/connector-icon -progress.gif"));
+
     QStringList NewCOMPorts;
     QList<QTreeWidgetItem*> items;
     ui->treeWidget->clear();
@@ -140,6 +142,7 @@ void MainWindow::searchCOMPorts(bool firstrun)
     {
         COMPorts.append(NewCOMPorts.at(y));
     }
+    trayIcon->setIcon(QIcon(":/icon/icons/connector-icon.gif"));
 }
 
 void MainWindow::slotTrayIconActivated(QSystemTrayIcon::ActivationReason reason)
