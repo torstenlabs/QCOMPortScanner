@@ -40,6 +40,7 @@ private:
     void initConnection();
     void searchCOMPorts(bool continous);
     void readSettings();
+    void checkApplications();
 
 
     Ui::MainWindow *ui;
@@ -53,6 +54,7 @@ private:
     QTimer *checkTimer;
     QStringList COMPorts;
     qint32 checkTimeMS;
+    QString pathPutty;
 
 };
 

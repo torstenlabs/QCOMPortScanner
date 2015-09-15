@@ -21,6 +21,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->statusBar->showMessage(QString(VERSION));
     trayIcon->show();
     readSettings();
+    checkApplications();
 
 }
 
@@ -158,7 +159,17 @@ void MainWindow::readSettings()
         trayIcon->showMessage(APP_NAME,tr("No Configuration available"));
     }
 
+    pathPutty = settings.value("pathPutty","").toString();
     checkTimeMS = settings.value("checkTimeMS",CHECKTIME_MS_DEFAULT).toInt();
+
+}
+
+void MainWindow::checkApplications()
+{
+    if(pathPutty != "")
+       if(!QFile::exists(pathPutty))
+            qDebug () << "Putty not found";
+
 }
 
 void MainWindow::slotTrayIconActivated(QSystemTrayIcon::ActivationReason reason)
