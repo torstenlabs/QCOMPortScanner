@@ -7,16 +7,21 @@ MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
+    setWindowTitle(APP_NAME);
     ui->setupUi(this);
     checkTimer = new QTimer(this);
-    checkTime = 5000;
     createActions();
     createTrayIcon();
+
+
     initConnection();
-    searchCOMPorts(true);
+
+    slotStopContinuous();
+    searchCOMPorts(false);
     ui->statusBar->showMessage(QString(VERSION));
     trayIcon->show();
-    this->hide();
+    readSettings();
+
 }
 
 MainWindow::~MainWindow()
@@ -40,8 +45,6 @@ void MainWindow::createTrayIcon()
     trayIconMenu->addAction(startConScanAction);
     trayIconMenu->addAction(stopConScanAction);
     trayIconMenu->addSeparator();
-    trayIconMenu->addAction(minimizeAction);
-    trayIconMenu->addAction(maximizeAction);
     trayIconMenu->addAction(restoreAction);
     trayIconMenu->addSeparator();
     trayIconMenu->addAction(quitAction);
@@ -53,13 +56,7 @@ void MainWindow::createTrayIcon()
 
 void MainWindow::createActions()
 {
-    minimizeAction = new QAction(tr("Minimize"),this);
-    connect(minimizeAction,SIGNAL(triggered()),this,SLOT(hide()));
-
-    maximizeAction = new QAction(tr("Maximize"),this);
-    connect(maximizeAction,SIGNAL(triggered()),this,SLOT(showMaximized()));
-
-    restoreAction = new QAction(tr("Restore"),this);
+    restoreAction = new QAction(tr("Show Window"),this);
     connect(restoreAction,SIGNAL(triggered()),this,SLOT(showNormal()));
 
     quitAction = new QAction(tr("Quit"),this);
@@ -86,19 +83,24 @@ void MainWindow::initConnection()
     connect(this->ui->actionScan,SIGNAL(triggered()),this,SLOT(slotSingleScan()));
 }
 
-void MainWindow::searchCOMPorts(bool firstrun)
+void MainWindow::searchCOMPorts(bool continous)
 {
-    trayIcon->setIcon(QIcon(":/icon/icons/connector-icon -progress.gif"));
-
     QStringList NewCOMPorts;
     QList<QTreeWidgetItem*> items;
+    bool firstrun = false;
+
+    if(COMPorts.count() == 0)
+        firstrun = true;
+
+    this->slotSetTrayIcon(true,continous);
+
     ui->treeWidget->clear();
+
     for(int i=0;i<QSerialPortInfo::availablePorts().count();i++)
     {
         QString portName=QSerialPortInfo::availablePorts().at(i).portName();
         QString portDescribtion=QSerialPortInfo::availablePorts().at(i).description();
         QString portManu=QSerialPortInfo::availablePorts().at(i).manufacturer();
-        qDebug() << portName << ": " << portDescribtion << "," << portManu;
         QTreeWidgetItem *newItem=new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString("%1").arg(portName)));
         newItem->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString("%1").arg(portDescribtion))));
         newItem->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString("%1").arg(portManu))));
@@ -109,10 +111,11 @@ void MainWindow::searchCOMPorts(bool firstrun)
         {
             if(firstrun == false)
             {
-                trayIcon->showMessage(tr("Detected %1").arg(portName),tr("%1: %2, %3").arg(portName).arg(portDescribtion).arg(portManu));
+                trayIcon->showMessage(APP_NAME,tr("Found %1: %2, %3").arg(portName).arg(portDescribtion).arg(portManu));
             }
         }
     }
+
     ui->treeWidget->insertTopLevelItems(0, items);
 
     foreach(QString newPort, NewCOMPorts)
@@ -132,7 +135,7 @@ void MainWindow::searchCOMPorts(bool firstrun)
     if(COMPorts.count() != 0)
     {
         foreach(QString oldPort, COMPorts)
-            trayIcon->showMessage(tr("Removed %1").arg(oldPort),tr("%1").arg(oldPort));
+            trayIcon->showMessage(APP_NAME,tr("Removed %1").arg(oldPort));
     }
 
 
@@ -142,7 +145,20 @@ void MainWindow::searchCOMPorts(bool firstrun)
     {
         COMPorts.append(NewCOMPorts.at(y));
     }
-    trayIcon->setIcon(QIcon(":/icon/icons/connector-icon.gif"));
+
+    this->slotSetTrayIcon(false,continous);
+}
+
+void MainWindow::readSettings()
+{
+    QSettings settings(CONFIG_FILE,QSettings::IniFormat);
+
+    if(!QFile::exists(CONFIG_FILE))
+    {
+        trayIcon->showMessage(APP_NAME,tr("No Configuration available"));
+    }
+
+    checkTimeMS = settings.value("checkTimeMS",CHECKTIME_MS_DEFAULT).toInt();
 }
 
 void MainWindow::slotTrayIconActivated(QSystemTrayIcon::ActivationReason reason)
@@ -155,26 +171,46 @@ void MainWindow::slotTrayIconActivated(QSystemTrayIcon::ActivationReason reason)
 
     if(reason == QSystemTrayIcon::Trigger)
     {
-       searchCOMPorts();
+       slotSingleScan();
     }
 }
 
 void MainWindow::slotTimeout()
 {
-    this->searchCOMPorts();
+    this->searchCOMPorts(true);
 }
 
 void MainWindow::slotSingleScan()
 {
-    this->searchCOMPorts();
+    this->searchCOMPorts(false);
 }
 
 void MainWindow::slotStartContinuous()
 {
-    checkTimer->start(this->checkTime);
+    this->slotSetTrayIcon(false,true);
+    checkTimer->start(checkTimeMS);
 }
 
 void MainWindow::slotStopContinuous()
 {
+    this->slotSetTrayIcon(false,false);
     checkTimer->stop();
+}
+
+void MainWindow::slotSetTrayIcon(bool scan, bool continous)
+{
+    if(scan)
+    {
+        trayIcon->setIcon(QIcon(":/icon/icons/connector-icon -progress.gif"));
+        return ;
+    }
+
+    if(continous)
+    {
+        trayIcon->setIcon(QIcon(":/icon/icons/connector-icon -continous.gif"));
+        return ;
+    }
+
+    trayIcon->setIcon(QIcon(":/icon/icons/connector-icon.gif"));
+
 }

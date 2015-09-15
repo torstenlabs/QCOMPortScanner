@@ -13,12 +13,10 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp\
-        mainwindow.cpp \
-    managecomports.cpp
+        mainwindow.cpp
 
 HEADERS  += mainwindow.h \
-    global.h \
-    managecomports.h
+    global.h
 
 FORMS    += mainwindow.ui
 

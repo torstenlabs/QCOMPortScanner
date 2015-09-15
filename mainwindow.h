@@ -9,6 +9,7 @@
 #include <QSerialPort>
 #include <QSerialPortInfo>
 #include <QTimer>
+#include <QSettings>
 
 namespace Ui {
 class MainWindow;
@@ -31,17 +32,17 @@ public slots:
     void slotSingleScan();
     void slotStartContinuous();
     void slotStopContinuous();
+    void slotSetTrayIcon(bool scan, bool continous);
 
 private:
     void createTrayIcon();
     void createActions();
     void initConnection();
-    void searchCOMPorts(bool firstrun = false);
+    void searchCOMPorts(bool continous);
+    void readSettings();
 
 
     Ui::MainWindow *ui;
-    QAction *minimizeAction;
-    QAction *maximizeAction;
     QAction *restoreAction;
     QAction *scanAction;
     QAction *startConScanAction;
@@ -51,7 +52,7 @@ private:
     QMenu *trayIconMenu;
     QTimer *checkTimer;
     QStringList COMPorts;
-    qint32 checkTime;
+    qint32 checkTimeMS;
 
 };
 
