@@ -13,14 +13,20 @@ MainWindow::MainWindow(QWidget *parent) :
     createActions();
     createTrayIcon();
 
-
     initConnection();
 
-    slotStopContinuous();
     searchCOMPorts(false);
     ui->statusBar->showMessage(QString(VERSION));
     trayIcon->show();
     readSettings();
+
+
+    if(continousScan)
+        slotStartContinuous();
+    else
+        slotStopContinuous();
+
+
     checkApplications();
 
 }
@@ -41,24 +47,28 @@ if(trayIcon->isVisible())
 
 void MainWindow::createTrayIcon()
 {
-    trayIconMenu = new QMenu(this);
+    trayIconMenu->clear();
+
     trayIconMenu->addAction(scanAction);
     trayIconMenu->addAction(startConScanAction);
     trayIconMenu->addAction(stopConScanAction);
     trayIconMenu->addSeparator();
-    trayIconMenu->addAction(restoreAction);
+
+    foreach(QAction *newAction, trayMenuActions)
+    {
+        trayIconMenu->addAction(newAction);
+    }
+
     trayIconMenu->addSeparator();
     trayIconMenu->addAction(quitAction);
 
-    trayIcon = new QSystemTrayIcon(this);
     trayIcon->setContextMenu(trayIconMenu);
-    trayIcon->setIcon(QIcon(":/icon/icons/connector-icon.gif"));
 }
 
 void MainWindow::createActions()
 {
-    restoreAction = new QAction(tr("Show Window"),this);
-    connect(restoreAction,SIGNAL(triggered()),this,SLOT(showNormal()));
+    trayIconMenu = new QMenu(this);
+    trayIcon = new QSystemTrayIcon(this);
 
     quitAction = new QAction(tr("Quit"),this);
     connect(quitAction,SIGNAL(triggered()),qApp,SLOT(quit()));
@@ -97,11 +107,25 @@ void MainWindow::searchCOMPorts(bool continous)
 
     ui->treeWidget->clear();
 
+    foreach(QAction *newAction, trayMenuActions)
+    {
+        disconnect(newAction,SIGNAL(triggered(bool)));
+        newAction->deleteLater();
+    }
+
+    trayMenuActions.clear();
+
     for(int i=0;i<QSerialPortInfo::availablePorts().count();i++)
     {
         QString portName=QSerialPortInfo::availablePorts().at(i).portName();
         QString portDescribtion=QSerialPortInfo::availablePorts().at(i).description();
         QString portManu=QSerialPortInfo::availablePorts().at(i).manufacturer();
+
+        QAction *newAction = new QAction(portName,this);
+        connect(newAction,SIGNAL(triggered(bool)),this,SLOT(slotActionClicked(bool)));
+        trayMenuActions.append(newAction);
+
+
         QTreeWidgetItem *newItem=new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString("%1").arg(portName)));
         newItem->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString("%1").arg(portDescribtion))));
         newItem->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString("%1").arg(portManu))));
@@ -147,6 +171,9 @@ void MainWindow::searchCOMPorts(bool continous)
         COMPorts.append(NewCOMPorts.at(y));
     }
 
+
+
+    createTrayIcon();
     this->slotSetTrayIcon(false,continous);
 }
 
@@ -160,8 +187,9 @@ void MainWindow::readSettings()
     }
 
     pathPutty = settings.value("pathPutty","").toString();
+    defaultSerialConfig = settings.value("defaultSerialConfig","115200,8,n,1,N").toString();
     checkTimeMS = settings.value("checkTimeMS",CHECKTIME_MS_DEFAULT).toInt();
-
+    continousScan = settings.value("continousScan","false").toBool();
 }
 
 void MainWindow::checkApplications()
@@ -174,12 +202,12 @@ void MainWindow::checkApplications()
 
 void MainWindow::slotTrayIconActivated(QSystemTrayIcon::ActivationReason reason)
 {
-    if(reason == QSystemTrayIcon::DoubleClick)
+   /* if(reason == QSystemTrayIcon::DoubleClick)
         if(this->isVisible())
             this->hide();
         else
             this->showNormal();
-
+*/
     if(reason == QSystemTrayIcon::Trigger)
     {
        slotSingleScan();
@@ -210,18 +238,38 @@ void MainWindow::slotStopContinuous()
 
 void MainWindow::slotSetTrayIcon(bool scan, bool continous)
 {
+    QPixmap myIcon;
+
+    myIcon.load(":/icon/icons/connector-icon.gif");
+
+    if(continous)
+        myIcon.load(":/icon/icons/connector-icon -continous.gif");
+
     if(scan)
-    {
-        trayIcon->setIcon(QIcon(":/icon/icons/connector-icon -progress.gif"));
-        return ;
-    }
+        myIcon.load(":/icon/icons/connector-icon -progress.gif");
 
     if(continous)
     {
-        trayIcon->setIcon(QIcon(":/icon/icons/connector-icon -continous.gif"));
-        return ;
+        QPainter painter(&myIcon);
+        painter.setFont(QFont("Arial",40));
+        painter.setPen(QPen(Qt::black, 3));
+        painter.setBrush(Qt::SolidPattern);
+        painter.drawRoundRect(QRect(15,15,myIcon.width()-30,myIcon.height()-30));
+        painter.setPen(QPen(QColor(255,128,0),10));
+
+        if(scan)
+            painter.setPen(QPen(Qt::green,10));
+
+        painter.drawText(QRect(10,10,myIcon.width()-20,myIcon.height()-20),Qt::AlignCenter,QString("%1").arg(checkTimeMS/1000));
     }
 
-    trayIcon->setIcon(QIcon(":/icon/icons/connector-icon.gif"));
+    trayIcon->setIcon(QIcon(myIcon));
+}
 
+void MainWindow::slotActionClicked(bool checked)
+{
+    Q_UNUSED(checked);
+    QAction *senderAction = dynamic_cast<QAction*>(QObject::sender());
+    QProcess putty;
+    putty.startDetached(pathPutty,QStringList() << "-serial" << senderAction->text() << "-sercfg" << defaultSerialConfig);
 }

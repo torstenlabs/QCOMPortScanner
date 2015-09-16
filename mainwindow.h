@@ -33,6 +33,7 @@ public slots:
     void slotStartContinuous();
     void slotStopContinuous();
     void slotSetTrayIcon(bool scan, bool continous);
+    void slotActionClicked(bool checked);
 
 private:
     void createTrayIcon();
@@ -44,7 +45,6 @@ private:
 
 
     Ui::MainWindow *ui;
-    QAction *restoreAction;
     QAction *scanAction;
     QAction *startConScanAction;
     QAction *stopConScanAction;
@@ -55,6 +55,10 @@ private:
     QStringList COMPorts;
     qint32 checkTimeMS;
     QString pathPutty;
+    QList<QAction*> trayMenuActions;
+    QString defaultSerialConfig;
+
+    bool continousScan;
 
 };
 
